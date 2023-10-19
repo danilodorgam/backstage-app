@@ -1,0 +1,115 @@
+include:
+  - project: 'unj/cross/devsecops/unj-ci-templates'
+    ref: master
+    file: 
+      - "node/node-app-cross.gitlab-ci.yml"
+
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE != "merge_request_event"'
+
+stages:
+  - validations
+  - install
+  - lint
+  - build
+  - scans-and-tests
+  - sonar-analysis
+  - docker-build
+  - container-scan
+  - docker-push
+  - promote
+  - changelog
+
+check-updates:
+  extends: .check-update
+  before_script:
+    - echo "${NPM_RC}" > .npmrc
+    - npm config fix 2>> /dev/null
+
+.install:
+  image: ${SDK_IMAGE_REACT}
+  stage: install
+  script:
+    - echo "${NPM_RC}" > .npmrc
+    - npm config fix 2>> /dev/null
+    - yarn install --frozen-lockfile
+    - yarn tsc 
+  interruptible: true
+  cache:
+    key: ${CI_PROJECT_ID}-${CI_COMMIT_REF_SLUG}
+    untracked: true
+    policy: push
+    paths:
+      - node_modules
+      - dist-types
+      - packages/app/node_modules
+      - packages/backend/node_modules
+      - yarn.lock
+      - .yarn/cache
+
+
+lint:
+  extends: .lint
+  script:
+    - yarn lint:all
+    - touch SUCCESS
+
+build:
+  extends: .build-node
+  script:
+    - echo "${NPM_RC}" > .npmrc
+    - yarn build:all
+  artifacts:
+    expire_in: 4 hours
+    paths:
+      - packages/app/dist
+      - pacakges/backend/dist
+  cache:
+    key: ${CI_PROJECT_ID}-${CI_COMMIT_REF_SLUG}
+    untracked: true
+    policy: pull-push
+    paths:
+      - packages/app/dist
+      - pacakges/backend/dist
+
+
+sast-scan:
+  stage: scans-and-tests
+  extends: .sast-lerna-js-scan
+
+
+test:
+  stage: scans-and-tests
+  extends: .test
+  script:
+    - yarn test:all
+  cache:
+    key: ${CI_PROJECT_ID}-${CI_COMMIT_REF_SLUG}
+    policy: pull
+    paths:
+      - node_modules
+      - packages/app/node_modules
+      - packages/backend/node_modules
+      - yarn.lock
+      - .yarn/cache
+
+docker-build:
+  extends: .docker-build
+  before_script:
+    - echo "${NPM_RC}" > .npmrc
+    - docker login -u "${REGISTRY_USER_DEV}" -p "${REGISTRY_PASSWORD_DEV}" "${REGISTRY_URL_DEV}"
+    - docker login -u "${REGISTRY_USER_DEFAULT}" -p "${REGISTRY_PASSWORD_DEFAULT}" "${REGISTRY_URL_DEFAULT}"
+  script:
+    - docker build --no-cache --pull -t "${DOCKER_IMAGE}:${TAG}" -f packages/backend/Dockerfile .
+    - docker save -o ${CI_PROJECT_NAME}.tar "${DOCKER_IMAGE}:${TAG}"
+  cache:
+    key: ${CI_PROJECT_ID}-${CI_COMMIT_REF_SLUG}
+    untracked: true
+    policy: pull
+    paths:
+      - node_modules
+      - packages/app/node_modules
+      - packages/backend/node_modules
+      - yarn.lock
+      - .yarn/cache

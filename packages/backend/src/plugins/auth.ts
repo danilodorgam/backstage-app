@@ -35,7 +35,7 @@ export default async function createPlugin(
       // your own, see the auth documentation for more details:
       //
       //   https://backstage.io/docs/auth/identity-resolver
-      github: providers.github.create({
+      gitlab: providers.gitlab.create({
         signIn: {
           resolver(_, ctx) {
             const userRef = 'user:default/guest'; // Must be a full entity reference

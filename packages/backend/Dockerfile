@@ -11,6 +11,8 @@
 
 FROM node:18-bookworm-slim
 
+RUN apt-get update && apt-get install -y procps curl
+
 # Install isolate-vm dependencies, these are needed by the @backstage/plugin-scaffolder-backend.
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \

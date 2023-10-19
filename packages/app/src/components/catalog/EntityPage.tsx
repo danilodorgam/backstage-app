@@ -28,10 +28,7 @@ import {
   hasRelationWarnings,
   EntityRelationWarning,
 } from '@backstage/plugin-catalog';
-import {
-  isGithubActionsAvailable,
-  EntityGithubActionsContent,
-} from '@backstage/plugin-github-actions';
+
 import {
   EntityUserProfileCard,
   EntityGroupProfileCard,
@@ -54,6 +51,14 @@ import {
   RELATION_PART_OF,
   RELATION_PROVIDES_API,
 } from '@backstage/catalog-model';
+import {
+  isGitlabAvailable,
+  EntityGitlabContent,
+  EntityGitlabLanguageCard,
+  EntityGitlabPeopleCard,
+  EntityGitlabPipelinesTable,
+  EntityGitlabReadmeCard
+} from '@immobiliarelabs/backstage-plugin-gitlab';
 
 import { TechDocsAddons } from '@backstage/plugin-techdocs-react';
 import { ReportIssue } from '@backstage/plugin-techdocs-module-addons-contrib';
@@ -70,9 +75,6 @@ const cicdContent = (
   // This is an example of how you can implement your company's logic in entity page.
   // You can for example enforce that all components of type 'service' should use GitHubActions
   <EntitySwitch>
-    <EntitySwitch.Case if={isGithubActionsAvailable}>
-      <EntityGithubActionsContent />
-    </EntitySwitch.Case>
 
     <EntitySwitch.Case>
       <EmptyState
@@ -124,6 +126,24 @@ const entityWarningContent = (
 const overviewContent = (
   <Grid container spacing={3} alignItems="stretch">
     {entityWarningContent}
+    <Grid container spacing={3} alignItems="stretch">
+        <EntitySwitch>
+            <EntitySwitch.Case if={isGitlabAvailable}>
+                <Grid item md={12}>
+                    <EntityGitlabReadmeCard />
+                </Grid>
+                <Grid item sm={12} md={3} lg={3}>
+                    <EntityGitlabPeopleCard />
+                </Grid>
+                <Grid item sm={12} md={3} lg={3}>
+                    <EntityGitlabLanguageCard />
+                </Grid>
+                <Grid item md={12}>
+                    <EntityGitlabPipelinesTable />
+                </Grid>
+            </EntitySwitch.Case>
+        </EntitySwitch>
+    </Grid>
     <Grid item md={6}>
       <EntityAboutCard variant="gridItem" />
     </Grid>
@@ -145,7 +165,13 @@ const serviceEntityPage = (
     <EntityLayout.Route path="/" title="Overview">
       {overviewContent}
     </EntityLayout.Route>
-
+    <EntityLayout.Route
+        if={isGitlabAvailable}
+        path="/gitlab"
+        title="Gitlab"
+    >
+      <EntityGitlabContent />
+    </EntityLayout.Route>
     <EntityLayout.Route path="/ci-cd" title="CI/CD">
       {cicdContent}
     </EntityLayout.Route>
